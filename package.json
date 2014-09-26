@@ -1,7 +1,7 @@
 {
   "name": "ward",
   "version": "0.1.0",
-  "description": "A library for effortlessly managing deeply-nested data in node and the browser.",
+  "description": "A library for effortlessly managing deeply-nested data structures in node and the browser.",
   "files": [
     "index.js"
   ],
