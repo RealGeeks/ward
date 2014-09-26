@@ -22,6 +22,11 @@ var data = ward({
   }
 });
 
+var observer = ward.observe(data, function (path, value) {
+  // When something changes in the data structure,
+  // this gets called.
+});
+
 data.user.name(); // -> 'John'
 data.user.friends(); // -> ['Mike', 'Alex']
 
@@ -30,6 +35,10 @@ data.user.name(); // -> 'Jack'
 
 data.user.friends[0]('Josh');
 data.user.friends(); // -> ['Josh', 'Alex']
+
+// Stop observing changes to data.
+observer.dispose();
+
 ```
 
 IE8 Support
