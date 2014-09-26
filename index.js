@@ -1,6 +1,5 @@
 'use strict';
 
-// var deep = require('./deep');
 var _ = require('lodash');
 var Emitter = require('eventemitter2').EventEmitter2;
 var create = Object.create;
