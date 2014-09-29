@@ -1,6 +1,8 @@
 'use strict';
 
 var _ = require('lodash');
+var isArray = _.isArray;
+var isObject = _.isPlainObject;
 var Emitter = require('eventemitter2').EventEmitter2;
 var create = Object.create;
 var namespace = '__ward__';
@@ -10,6 +12,7 @@ function Wrapper(value, path) {
 
   wrapper.keys = [];
   wrapper.path = path;
+  wrapper.value = value;
 
   var accessor = wrapper.accessor = function (newValue) {
     if (newValue !== undefined) {
@@ -19,7 +22,8 @@ function Wrapper(value, path) {
   };
 
   accessor[namespace] = wrapper;
-  accessor(value);
+
+  wrapper.walk();
 
   return accessor;
 }
@@ -39,7 +43,7 @@ var WrapperPrototype = {
     }
 
     wrapper.clean();
-    wrapper.walk(newValue);
+    wrapper.walk();
     wrapper.emit(wrapper.path, newValue);
 
     return true;
@@ -75,10 +79,11 @@ var WrapperPrototype = {
     wrapper.keys.length = 0;
   },
 
-  walk: function (newValue) {
+  walk: function () {
     var wrapper = this;
-    if (_.isArray(newValue) || _.isPlainObject(newValue)) {
-      _.each(newValue, function (value, key) {
+    var data = wrapper.value;
+    if (isArray(data) || isObject(data)) {
+      _.each(data, function (value, key) {
         wrapper.accessor[key] = wrapper.create(value, wrapper.path.concat(key));
         wrapper.keys.push(key);
       });
@@ -102,4 +107,48 @@ var ward = module.exports = function (value) {
 
 ward.observe = function (object, observer) {
   return object[namespace].addObserver(observer);
+};
+
+ward.keys = function (object) {
+  return object[namespace].keys.slice();
+};
+
+ward.assign = function (target, source) {
+  if (!target[namespace]) {
+    throw new TypeError('First argument needs to be a ward object.');
+  }
+
+  var targetValue = target();
+  var i;
+  var keys;
+  var j;
+  var key;
+
+  if (!isObject(targetValue) && !isArray(targetValue)) {
+    throw new TypeError('Can only assign to plain objects and arrays.');
+  }
+
+  targetValue = _.clone(targetValue);
+
+  for (i = 1; i < arguments.length; i++) {
+    source = arguments[i];
+
+    if (source[namespace]) {
+      source = source();
+    }
+
+    if (!isObject(source) && !isArray(source)) {
+      continue;
+    }
+
+    keys = Object.keys(source);
+    for (j = 0; j < keys.length; j++) {
+      key = keys[j];
+      targetValue[key] = source[key];
+    }
+  }
+
+  target(targetValue);
+
+  return target;
 };

@@ -122,3 +122,42 @@ test('Can observe nested data', function (assert) {
 
   observer.dispose();
 });
+
+test('Ward.keys returns an object’s own enumerable properties', function (assert) {
+  assert.plan(3);
+
+  assert.deepEqual(ward.keys(ward([5, 3, 2])), [0, 1, 2], 'array keys');
+  assert.deepEqual(ward.keys(ward({a: 1, b: 2})), ['a', 'b'], 'object keys');
+  assert.deepEqual(ward.keys(ward(4)), [], 'number keys');
+});
+
+test('Ward.assign extends objects', function (assert) {
+  assert.plan(6);
+
+  var observable = ward({a: 2});
+
+  var observer = ward.observe(observable, function (path, value) {
+    assert.deepEqual(path, []);
+    assert.deepEqual(value, {a: 2, b: 3});
+
+    observer.dispose();
+  });
+
+  assert.throws(ward.assign.bind(ward, {}, {a: 1}), 'not a ward object');
+  assert.throws(ward.assign.bind(ward, ward(3), {a: 1}), 'not object or array');
+  assert.deepEqual(
+    ward.assign(observable, ward({b: 3}))(),
+    {a: 2, b: 3},
+    'simple'
+  );
+  assert.deepEqual(
+    ward.assign(
+      ward({a: 1}),
+      {b: 2},
+      ward({c: 3})
+    )(),
+    {a: 1, b: 2, c: 3},
+    'complex'
+  );
+
+});
