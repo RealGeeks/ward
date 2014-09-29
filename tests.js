@@ -164,10 +164,10 @@ test('Ward.assign extends objects', function (assert) {
 });
 
 test('Array Extension', function (assert) {
-  var array = ward([1, 2]);
-  var object = ward({a: 1});
+  var object1 = ward([1, 2]);
+  var object2 = ward({a: 1});
 
-  assert.plan(38);
+  assert.plan(40);
 
   [
     'push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice',
@@ -175,9 +175,15 @@ test('Array Extension', function (assert) {
     'forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight'
   ]
     .forEach(function (methodName) {
-      assert.ok(array[methodName], methodName + ' exists');
-      assert.ok(!object[methodName], methodName + ' does not exist');
+      assert.ok(object1[methodName], methodName + ' exists');
+      assert.ok(!object2[methodName], methodName + ' does not exist');
     });
+
+  object1({b: 2});
+  object2([2, 3]);
+
+  assert.ok(!object1.push, 'remove array methods');
+  assert.ok(object2.push, 'add array methods');
 });
 
 test('Array.push', function (assert) {

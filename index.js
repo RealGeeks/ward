@@ -3,9 +3,16 @@
 var _ = require('lodash');
 var isArray = _.isArray;
 var isObject = _.isPlainObject;
+var extend = _.extend;
 var Emitter = require('eventemitter2').EventEmitter2;
 var create = Object.create;
 var namespace = '__ward__';
+
+function deleteProperties(object, keys) {
+  keys.forEach(function (key) {
+    delete object[key];
+  });
+}
 
 function Wrapper(value, path) {
   var wrapper = this;
@@ -24,7 +31,7 @@ function Wrapper(value, path) {
   accessor[namespace] = wrapper;
 
   if (isArray(value)) {
-    _.extend(accessor, arrayExtension);
+    extend(accessor, arrayExtension);
   }
 
   wrapper.walk();
@@ -38,6 +45,14 @@ var WrapperPrototype = {
     // Bail if the new value is equivalent to the old.
     if (_.isEqual(wrapper.value, newValue)) {
       return false;
+    }
+
+    if (isArray(wrapper.value)) {
+      if (!isArray(newValue)) {
+        deleteProperties(wrapper.accessor, arrayMethods);
+      }
+    } else if (isArray(newValue)) {
+      extend(wrapper.accessor, arrayExtension);
     }
 
     wrapper.value = newValue;
@@ -95,38 +110,40 @@ var WrapperPrototype = {
   }
 };
 
+var arrayMutatorMethods =
+  ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
+var arrayOtherMethods =
+  [
+    // Accessor methods
+    'concat', 'join', 'slice', 'indexOf', 'lastIndexOf',
+
+    // Iteration methods
+    'forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight'
+  ];
+var arrayMethods = arrayMutatorMethods.concat(arrayOtherMethods);
 var arrayExtension = {};
 
-// Mutator methods
-['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice']
-  .forEach(function (methodName) {
-    arrayExtension[methodName] = function () {
-      var accessor = this;
-      var array = accessor().slice();
-      var result = array[methodName].apply(array, arguments);
-      accessor(array);
-      return result;
-    };
-  });
+arrayMutatorMethods.forEach(function (methodName) {
+  arrayExtension[methodName] = function () {
+    var accessor = this;
+    var array = accessor().slice();
+    var result = array[methodName].apply(array, arguments);
+    accessor(array);
+    return result;
+  };
+});
 
-[
-  // Accessor methods
-  'concat', 'join', 'slice', 'indexOf', 'lastIndexOf',
-
-  // Iteration methods
-  'forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight'
-]
-  .forEach(function (methodName) {
-    arrayExtension[methodName] = function () {
-      var array = this();
-      return array[methodName].apply(array, arguments);
-    };
-  });
+arrayOtherMethods.forEach(function (methodName) {
+  arrayExtension[methodName] = function () {
+    var array = this();
+    return array[methodName].apply(array, arguments);
+  };
+});
 
 var ward = module.exports = function (value) {
   var prototype = create(new Emitter({wildcard: true}));
 
-  _.extend(prototype, WrapperPrototype);
+  extend(prototype, WrapperPrototype);
 
   prototype.create = function (value, path) {
     var object = create(prototype);
