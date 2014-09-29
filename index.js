@@ -23,6 +23,10 @@ function Wrapper(value, path) {
 
   accessor[namespace] = wrapper;
 
+  if (isArray(value)) {
+    _.extend(accessor, arrayExtension);
+  }
+
   wrapper.walk();
 
   return accessor;
@@ -90,6 +94,34 @@ var WrapperPrototype = {
     }
   }
 };
+
+var arrayExtension = {};
+
+// Mutator methods
+['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice']
+  .forEach(function (methodName) {
+    arrayExtension[methodName] = function () {
+      var accessor = this;
+      var array = accessor().slice();
+      var result = array[methodName].apply(array, arguments);
+      accessor(array);
+      return result;
+    };
+  });
+
+[
+  // Accessor methods
+  'concat', 'join', 'slice', 'indexOf', 'lastIndexOf',
+
+  // Iteration methods
+  'forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight'
+]
+  .forEach(function (methodName) {
+    arrayExtension[methodName] = function () {
+      var array = this();
+      return array[methodName].apply(array, arguments);
+    };
+  });
 
 var ward = module.exports = function (value) {
   var prototype = create(new Emitter({wildcard: true}));

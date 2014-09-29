@@ -154,10 +154,57 @@ test('Ward.assign extends objects', function (assert) {
     ward.assign(
       ward({a: 1}),
       {b: 2},
-      ward({c: 3})
+      ward({c: 3}),
+      [2, 3]
     )(),
-    {a: 1, b: 2, c: 3},
+    {0: 2, 1: 3, a: 1, b: 2, c: 3},
     'complex'
   );
 
+});
+
+test('Array Extension', function (assert) {
+  var array = ward([1, 2]);
+  var object = ward({a: 1});
+
+  assert.plan(38);
+
+  [
+    'push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice',
+    'concat', 'join', 'slice', 'indexOf', 'lastIndexOf',
+    'forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight'
+  ]
+    .forEach(function (methodName) {
+      assert.ok(array[methodName], methodName + ' exists');
+      assert.ok(!object[methodName], methodName + ' does not exist');
+    });
+});
+
+test('Array.push', function (assert) {
+  assert.plan(3);
+
+  var data = ward([1, 2]);
+  var length = data.push(3, 4);
+
+  assert.equal(length, 4, 'length');
+  assert.deepEqual(data(), [1, 2, 3, 4], 'new array');
+
+  // Only arrays should have push.
+  assert.equal(ward({}).push, undefined);
+});
+
+test('Array.pop', function (assert) {
+  assert.plan(2);
+
+  var data = ward([1, 2]);
+  var item = data.pop();
+
+  assert.equal(item, 2, 'popped item');
+  assert.deepEqual(data(), [1], 'new array');
+});
+
+test('Array.join', function (assert) {
+  assert.plan(1);
+
+  assert.equal(ward([1, 2]).join(), '1,2');
 });
