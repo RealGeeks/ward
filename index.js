@@ -162,6 +162,10 @@ ward.keys = function (object) {
   return object[namespace].keys.slice();
 };
 
+ward.count = function (object) {
+  return object[namespace].keys.length;
+};
+
 ward.assign = function (target, source) {
   if (!target[namespace]) {
     throw new TypeError('First argument needs to be a ward object.');

@@ -123,13 +123,25 @@ test('Can observe nested data', function (assert) {
   observer.dispose();
 });
 
-test('Ward.keys returns an object’s own enumerable properties', function (assert) {
-  assert.plan(3);
+test('Ward.keys returns an object’s own enumerable properties',
+  function (assert) {
+    assert.plan(3);
 
-  assert.deepEqual(ward.keys(ward([5, 3, 2])), [0, 1, 2], 'array keys');
-  assert.deepEqual(ward.keys(ward({a: 1, b: 2})), ['a', 'b'], 'object keys');
-  assert.deepEqual(ward.keys(ward(4)), [], 'number keys');
-});
+    assert.deepEqual(ward.keys(ward([5, 3, 2])), [0, 1, 2], 'array keys');
+    assert.deepEqual(ward.keys(ward({a: 1, b: 2})), ['a', 'b'], 'object keys');
+    assert.deepEqual(ward.keys(ward(4)), [], 'number keys');
+  }
+);
+
+test('Ward.count returns an object’s own enumerable properties count',
+  function (assert) {
+    assert.plan(3);
+
+    assert.equal(ward.count(ward('asd')), 0, 'primitive length');
+    assert.equal(ward.count(ward([5, 3, 2])), 3, 'array length');
+    assert.equal(ward.count(ward({a: 1, b: 2})), 2, 'object props count');
+  }
+);
 
 test('Ward.assign extends objects', function (assert) {
   assert.plan(6);
