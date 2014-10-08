@@ -188,6 +188,14 @@ test('Ward objects used in primitive contexts', function (assert) {
   assert.equal(data.b + ' else', 'something else', 'concatenation');
 });
 
+test('Ward objects used in string contexts', function (assert) {
+  assert.plan(1);
+
+  var data = ward([5]);
+
+  assert.equal(data + '5', '55', 'concatenation');
+});
+
 test('Array Extension', function (assert) {
   var object1 = ward([1, 2]);
   var object2 = ward({a: 1});

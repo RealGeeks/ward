@@ -31,6 +31,12 @@ function Wrapper(value, path) {
   // Enables comparisons such as accessor == 2, when wrapper.value is 2.
   accessor.valueOf = accessor;
 
+  // Enables use in string contexts, such as 'a' + accessor would be 'ab'
+  // when wrapper.value is ['b'].
+  accessor.toString = function () {
+    return wrapper.value.toString();
+  };
+
   accessor[namespace] = wrapper;
 
   if (isArray(value)) {
