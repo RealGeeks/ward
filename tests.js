@@ -175,6 +175,19 @@ test('Ward.assign extends objects', function (assert) {
 
 });
 
+test('Ward objects used in primitive contexts', function (assert) {
+  assert.plan(3);
+
+  var data = ward({
+    a: 4,
+    b: 'something'
+  });
+
+  assert.ok(data.a == 4, 'equality');
+  assert.equal(data.a + 2, 6, 'sum');
+  assert.equal(data.b + ' else', 'something else', 'concatenation');
+});
+
 test('Array Extension', function (assert) {
   var object1 = ward([1, 2]);
   var object2 = ward({a: 1});

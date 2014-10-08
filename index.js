@@ -28,6 +28,9 @@ function Wrapper(value, path) {
     return wrapper.value;
   };
 
+  // Enables comparisons such as accessor == 2, when wrapper.value is 2.
+  accessor.valueOf = accessor;
+
   accessor[namespace] = wrapper;
 
   if (isArray(value)) {
