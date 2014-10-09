@@ -79,7 +79,6 @@ var WrapperPrototype = {
 
   addObserver: function (observer) {
     var wrapper = this;
-    console.log(this);
     var path = wrapper.path.concat('**');
     var callback = function (newValue) {
       var path = this.event;
