@@ -135,6 +135,29 @@ test('Can observe nested data', function (assert) {
   observer.dispose();
 });
 
+test('Does not trigger observer on detached children', function (assert) {
+  assert.plan(3);
+
+  var data = ward({a: {b: 1}});
+  var child = data.a;
+
+  var observer1 = ward.observe(data, function () {
+    assert.ok('should trigger twice');
+  });
+
+  var observer2 = ward.observe(child, function () {
+    assert.fail('should not trigger');
+  });
+
+  data({a: {b: 2}});
+  data.a({b: 3});
+
+  assert.ok(child != data.a, 'different instances');
+
+  observer1.dispose();
+  observer2.dispose();
+});
+
 test('Ward.keys returns an object’s own enumerable properties',
   function (assert) {
     assert.plan(3);

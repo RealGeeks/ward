@@ -4,8 +4,6 @@ var _ = require('lodash');
 var isArray = _.isArray;
 var isObject = _.isPlainObject;
 var extend = _.extend;
-var Emitter = require('eventemitter2').EventEmitter2;
-var create = Object.create;
 var namespace = '__ward__';
 
 function deleteProperties(object, keys) {
@@ -14,41 +12,43 @@ function deleteProperties(object, keys) {
   });
 }
 
-function Wrapper(value, path) {
-  var wrapper = this;
-
-  wrapper.keys = [];
-  wrapper.path = path;
-  wrapper.value = value;
-
-  var accessor = wrapper.accessor = function (newValue) {
-    if (newValue !== undefined) {
-      return wrapper.set(newValue);
-    }
-    return wrapper.value;
-  };
-
-  // Enables comparisons such as accessor == 2, when wrapper.value is 2.
-  accessor.valueOf = accessor;
-
-  // Enables use in string contexts, such as 'a' + accessor would be 'ab'
-  // when wrapper.value is ['b'].
-  accessor.toString = function () {
-    return wrapper.value.toString();
-  };
-
-  accessor[namespace] = wrapper;
-
-  if (isArray(value)) {
-    extend(accessor, arrayExtension);
-  }
-
-  wrapper.walk();
-
-  return accessor;
-}
-
 var WrapperPrototype = {
+  create: function (value, name) {
+    var wrapper = Object.create(WrapperPrototype);
+
+    wrapper.parent = this != WrapperPrototype ? this : undefined;
+    wrapper.name = name;
+    wrapper.value = value;
+    wrapper.keys = [];
+    wrapper.observers = [];
+
+    var accessor = wrapper.accessor = function (newValue) {
+      if (newValue !== undefined) {
+        return wrapper.set(newValue);
+      }
+      return wrapper.value;
+    };
+
+    // Enables comparisons such as accessor == 2, when wrapper.value is 2.
+    accessor.valueOf = accessor;
+
+    // Enables use in string contexts, such as 'a' + accessor would be 'ab'
+    // when wrapper.value is ['b'].
+    accessor.toString = function () {
+      return wrapper.value.toString();
+    };
+
+    accessor[namespace] = wrapper;
+
+    if (isArray(value)) {
+      extend(accessor, arrayExtension);
+    }
+
+    wrapper.walk();
+
+    return accessor;
+  },
+
   set: function (newValue) {
     var wrapper = this;
     // Bail if the new value is equivalent to the old.
@@ -67,40 +67,43 @@ var WrapperPrototype = {
     wrapper.value = newValue;
 
     if (wrapper.parent) {
-      wrapper.parent.value[wrapper.path[wrapper.path.length - 1]] = newValue;
+      wrapper.parent.value[wrapper.name] = newValue;
     }
 
     wrapper.clean();
     wrapper.walk();
-    wrapper.emit(wrapper.path, newValue);
+    wrapper.triggerObservers([], newValue);
 
     return true;
   },
 
   addObserver: function (observer) {
     var wrapper = this;
-    var path = wrapper.path.concat('**');
-    var callback = function (newValue) {
-      var path = this.event;
-      observer.call(
-        wrapper.accessor,
-        _.difference(path, wrapper.path),
-        newValue
-      );
-    };
 
-    wrapper.on(path, callback);
+    wrapper.observers.push(observer);
 
     return {
       dispose: function () {
-        wrapper.off(path, callback);
+        _.pull(wrapper.observers, observer);
       }
     };
+  },
+
+  triggerObservers: function (path, newValue) {
+    var wrapper = this;
+    var parent = wrapper.parent;
+
+    wrapper.observers.forEach(function (observer) {
+      observer.call(wrapper, path, newValue);
+    });
+
+    parent && parent.triggerObservers(path.concat(wrapper.name), newValue);
   },
 
   clean: function () {
     var wrapper = this;
     wrapper.keys.forEach(function (key) {
+      wrapper.accessor[key].parent = undefined;
       delete wrapper.accessor[key];
     });
     wrapper.keys.length = 0;
@@ -111,7 +114,7 @@ var WrapperPrototype = {
     var data = wrapper.value;
     if (isArray(data) || isObject(data)) {
       _.each(data, function (value, key) {
-        wrapper.accessor[key] = wrapper.create(value, wrapper.path.concat(key));
+        wrapper.accessor[key] = wrapper.create(value, key);
         wrapper.keys.push(key);
       });
     }
@@ -149,17 +152,7 @@ arrayOtherMethods.forEach(function (methodName) {
 });
 
 var ward = module.exports = function (value) {
-  var prototype = create(new Emitter({wildcard: true}));
-
-  extend(prototype, WrapperPrototype);
-
-  prototype.create = function (value, path) {
-    var object = create(prototype);
-    object.parent = this != prototype ? this : null;
-    return Wrapper.call(object, value, path);
-  };
-
-  return prototype.create(value, []);
+  return WrapperPrototype.create(value);
 };
 
 ward.observe = function (object, observer) {
