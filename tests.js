@@ -57,6 +57,18 @@ test('Write nested array', function (assert) {
   assert.deepEqual(data(), {nested: {a: [1, {b: 2}, 3]}});
 });
 
+test('Write deeply nested object', function (assert) {
+  var data = ward({deeply: {nested: {a: 1}}});
+  assert.plan(4);
+
+  data.deeply.nested.a(2);
+
+  assert.deepEqual(data.deeply.nested.a(), 2);
+  assert.deepEqual(data.deeply.nested(), {a: 2});
+  assert.deepEqual(data.deeply(), {nested: {a: 2}});
+  assert.deepEqual(data(), {deeply: {nested: {a: 2}}});
+});
+
 test('Removes old wrappers', function (assert) {
   var data = ward({nested: {a: 1, b: 2}});
   assert.plan(2);
