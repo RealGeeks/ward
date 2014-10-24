@@ -94,7 +94,7 @@ var WrapperPrototype = {
     var parent = wrapper.parent;
 
     wrapper.observers.forEach(function (observer) {
-      observer.call(wrapper, path, newValue);
+      observer.call(wrapper.accessor, path, newValue);
     });
 
     parent && parent.triggerObservers(path.concat(wrapper.name), newValue);

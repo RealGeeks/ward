@@ -108,9 +108,10 @@ test('Triggers observer', function (assert) {
 test('Triggers observer for nested change', function (assert) {
   var data = ward({a: 1});
 
-  assert.plan(2);
+  assert.plan(3);
 
   var observer = ward.observe(data, function (path, value) {
+    assert.equal(this, data, 'context');
     assert.deepEqual(path, ['a']);
     assert.equal(value, 2);
   });
