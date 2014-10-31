@@ -18,6 +18,11 @@ test('Read nested value', function (assert) {
   assert.equal(data.vector[1](), 2);
 });
 
+test('Write undefined', function (assert) {
+  assert.plan(1);
+  assert.equal(ward(2)(undefined)(), undefined);
+});
+
 test('Write primitive value', function (assert) {
   var data = ward('ant');
   assert.plan(2);

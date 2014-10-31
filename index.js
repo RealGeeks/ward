@@ -23,7 +23,7 @@ var WrapperPrototype = {
     wrapper.observers = [];
 
     var accessor = wrapper.accessor = function (newValue) {
-      if (newValue !== undefined) {
+      if (arguments.length) {
         return wrapper.set(newValue);
       }
       return wrapper.value;
