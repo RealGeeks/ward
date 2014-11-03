@@ -209,3 +209,9 @@ test('Ward objects used in string contexts', function (assert) {
 
   assert.equal(data + '5', '55', 'concatenation');
 });
+
+test('Ward objects used in JSON.stringify()', function (assert) {
+  assert.plan(1);
+
+  assert.deepEqual(JSON.stringify(ward(9)), '9');
+});

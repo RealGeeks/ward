@@ -31,8 +31,9 @@ var wrapperPrototype = {
       return value;
     };
 
-    // Enables comparisons such as accessor == 2, when wrapper.value is 2.
-    accessor.valueOf = accessor;
+    // valueOf enables comparisons such as accessor == 2.
+    // toJSON enables passing of accessor object inside JSON.stringify().
+    accessor.valueOf = accessor.toJSON = _.constant(value);
 
     // Enables use in string contexts, such as 'a' + accessor would be 'ab'
     // when wrapper.value is ['b'].
