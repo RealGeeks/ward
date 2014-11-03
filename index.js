@@ -3,30 +3,33 @@
 var _ = require('lodash');
 var isArray = _.isArray;
 var isObject = _.isPlainObject;
+var objectCreate = Object.create;
+var objectKeys = Object.keys;
 var extend = _.extend;
 var namespace = '__ward__';
 
-function deleteProperties(object, keys) {
-  keys.forEach(function (key) {
-    delete object[key];
-  });
-}
+var wrapperPrototype = {
+  create: function (value, extension) {
+    // this can be either a wrapper object or wrapperPrototype
+    var model = this;
+    var wrapper = objectCreate(wrapperPrototype);
 
-var WrapperPrototype = {
-  create: function (value, name) {
-    var wrapper = Object.create(WrapperPrototype);
+    var shifter = wrapper.shifter = model.shifter;
 
-    wrapper.parent = this != WrapperPrototype ? this : undefined;
-    wrapper.name = name;
     wrapper.value = value;
-    wrapper.keys = [];
-    wrapper.observers = [];
+    wrapper.keys = (isArray(value) || isObject(value)) ? objectKeys(value) : [];
+
+    model.shifter = {};
 
     var accessor = wrapper.accessor = function (newValue) {
-      if (newValue !== undefined) {
-        return wrapper.set(newValue);
+      if (arguments.length) {
+        var result = wrapper.set(newValue);
+
+        result[namespace].notifyUpstream();
+
+        return result;
       }
-      return wrapper.value;
+      return value;
     };
 
     // Enables comparisons such as accessor == 2, when wrapper.value is 2.
@@ -35,124 +38,140 @@ var WrapperPrototype = {
     // Enables use in string contexts, such as 'a' + accessor would be 'ab'
     // when wrapper.value is ['b'].
     accessor.toString = function () {
-      return wrapper.value.toString();
+      return value.toString();
     };
 
     accessor[namespace] = wrapper;
 
-    if (isArray(value)) {
-      extend(accessor, arrayExtension);
+    wrapper.keys.forEach(function (key) {
+      accessor[key] = extension && extension[key] || model.accessor[key] ||
+        wrapperPrototype.create(value[key]).accessor;
+
+      if (shifter.observers && !accessor[key][namespace].shifter.upstream) {
+        wrapper.watchKey(key);
+      }
+    });
+
+    return wrapper;
+  },
+
+  accessor: _.noop,
+  shifter: {},
+
+  set: function (newValue) {
+    var wrapper = this;
+    var accessor = wrapper.accessor;
+    var oldValue = wrapper.value;
+    if (
+      oldValue === newValue ||
+      // Test for NaN value
+      oldValue != oldValue && newValue != newValue
+    ) {
+      return accessor;
     }
 
-    wrapper.walk();
+    var newChildren = wrapper.keys.reduce(function (accumulator, key) {
+      var oldChild = accessor[key];
+      if (_.has(newValue, key)) {
+        var newChild = oldChild(newValue[key]);
+        if (oldChild != newChild) {
+          accumulator[key] = newChild;
+        }
+      }
+      return accumulator;
+    }, {});
+
+    if (
+      oldValue == null || newValue == null ||
+      oldValue.constructor != newValue.constructor ||
+      !isArray(oldValue) && !isObject(oldValue) ||
+      !isArray(newValue) && !isObject(newValue) ||
+      objectKeys(oldValue).join() != objectKeys(newValue).join() ||
+      objectKeys(newChildren).length
+    ) {
+      wrapper = wrapper.create(newValue, newChildren);
+      wrapper.triggerObservers();
+      accessor = wrapper.accessor;
+    }
 
     return accessor;
   },
 
-  set: function (newValue) {
-    var wrapper = this;
-    // Bail if the new value is equivalent to the old.
-    if (_.isEqual(wrapper.value, newValue)) {
-      return false;
-    }
-
-    if (isArray(wrapper.value)) {
-      if (!isArray(newValue)) {
-        deleteProperties(wrapper.accessor, arrayMethods);
-      }
-    } else if (isArray(newValue)) {
-      extend(wrapper.accessor, arrayExtension);
-    }
-
-    wrapper.value = newValue;
-
-    if (wrapper.parent) {
-      wrapper.parent.value[wrapper.name] = newValue;
-    }
-
-    wrapper.clean();
-    wrapper.walk();
-    wrapper.triggerObservers([], newValue);
-
-    return true;
-  },
-
   addObserver: function (observer) {
     var wrapper = this;
+    var shifter = wrapper.shifter;
+    var observers = shifter.observers || (shifter.observers = []);
 
-    wrapper.observers.push(observer);
+    observers.push(observer);
+
+    if (!shifter.subs) {
+      shifter.subs = [];
+      wrapper.keys.forEach(wrapper.watchKey, wrapper);
+    }
 
     return {
       dispose: function () {
-        _.pull(wrapper.observers, observer);
+        _.pull(observers, observer);
+
+        if (!observers.length) {
+          _.invoke(shifter.subs, 'dispose');
+          shifter.subs = shifter.observers = undefined;
+        }
       }
     };
   },
 
-  triggerObservers: function (path, newValue) {
-    var wrapper = this;
-    var parent = wrapper.parent;
+  addUpstream: function (observer) {
+    var shifter = this.shifter;
+    var observers = shifter.upstream || (shifter.upstream = []);
+    observers.push(observer);
 
-    wrapper.observers.forEach(function (observer) {
-      observer.call(wrapper.accessor, path, newValue);
-    });
+    return {
+      dispose: function () {
+        _.pull(observers, observer);
 
-    parent && parent.triggerObservers(path.concat(wrapper.name), newValue);
+        if (!observers.length) {
+          shifter.upstream = undefined;
+        }
+      }
+    };
   },
 
-  clean: function () {
+  watchKey: function (key) {
     var wrapper = this;
-    wrapper.keys.forEach(function (key) {
-      wrapper.accessor[key].parent = undefined;
-      delete wrapper.accessor[key];
-    });
-    wrapper.keys.length = 0;
+    wrapper.shifter.subs.push(
+      wrapper.accessor[key][namespace].addUpstream(function (newAccessor) {
+        var value = _.clone(wrapper.accessor());
+        value[key] = newAccessor();
+
+        var extension = {};
+        extension[key] = newAccessor;
+
+        var newWrapper = wrapper.create(value, extension);
+
+        newWrapper.triggerObservers();
+        newWrapper.notifyUpstream();
+      })
+    );
   },
 
-  walk: function () {
-    var wrapper = this;
-    var data = wrapper.value;
-    if (isArray(data) || isObject(data)) {
-      _.each(data, function (value, key) {
-        wrapper.accessor[key] = wrapper.create(value, key);
-        wrapper.keys.push(key);
-      });
+  triggerObservers: function () {
+    var observers = this.shifter.observers;
+    if (observers) {
+      _.invoke(observers, 'call', this, this.accessor);
+    }
+  },
+
+  notifyUpstream: function () {
+    var observers = this.shifter.upstream;
+    if (observers) {
+      _.invoke(observers, 'call', this, this.accessor);
     }
   }
 };
 
-var arrayMutatorMethods =
-  ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
-var arrayOtherMethods =
-  [
-    // Accessor methods
-    'concat', 'join', 'slice', 'indexOf', 'lastIndexOf',
-
-    // Iteration methods
-    'forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight'
-  ];
-var arrayMethods = arrayMutatorMethods.concat(arrayOtherMethods);
-var arrayExtension = {};
-
-arrayMutatorMethods.forEach(function (methodName) {
-  arrayExtension[methodName] = function () {
-    var accessor = this;
-    var array = accessor().slice();
-    var result = array[methodName].apply(array, arguments);
-    accessor(array);
-    return result;
-  };
-});
-
-arrayOtherMethods.forEach(function (methodName) {
-  arrayExtension[methodName] = function () {
-    var array = this();
-    return array[methodName].apply(array, arguments);
-  };
-});
-
 var ward = module.exports = function (value) {
-  return WrapperPrototype.create(value);
+  return wrapperPrototype.create(value).accessor;
 };
 
 ward.observe = function (object, observer) {
@@ -165,44 +184,4 @@ ward.keys = function (object) {
 
 ward.count = function (object) {
   return object[namespace].keys.length;
-};
-
-ward.assign = function (target, source) {
-  if (!target[namespace]) {
-    throw new TypeError('First argument needs to be a ward object.');
-  }
-
-  var targetValue = target();
-  var i;
-  var keys;
-  var j;
-  var key;
-
-  if (!isObject(targetValue) && !isArray(targetValue)) {
-    throw new TypeError('Can only assign to plain objects and arrays.');
-  }
-
-  targetValue = _.clone(targetValue);
-
-  for (i = 1; i < arguments.length; i++) {
-    source = arguments[i];
-
-    if (source[namespace]) {
-      source = source();
-    }
-
-    if (!isObject(source) && !isArray(source)) {
-      continue;
-    }
-
-    keys = Object.keys(source);
-    for (j = 0; j < keys.length; j++) {
-      key = keys[j];
-      targetValue[key] = source[key];
-    }
-  }
-
-  target(targetValue);
-
-  return target;
 };
