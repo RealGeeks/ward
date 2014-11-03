@@ -5,7 +5,6 @@ var isArray = _.isArray;
 var isObject = _.isPlainObject;
 var objectCreate = Object.create;
 var objectKeys = Object.keys;
-var extend = _.extend;
 var namespace = '__ward__';
 
 var wrapperPrototype = {
