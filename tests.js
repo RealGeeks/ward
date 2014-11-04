@@ -41,6 +41,16 @@ test('Write undefined', function (assert) {
   assert.equal(ward(2)(undefined)(), undefined);
 });
 
+test('Writing equivalent value returns same object', function (assert) {
+  assert.plan(2);
+
+  var data = ward('foo');
+  assert.equal(data('foo'), data);
+
+  data = ward({a: 'foo'});
+  assert.equal(data({a: 'foo'}), data);
+});
+
 test('Write primitive value', function (assert) {
   var data = ward('ant');
   assert.plan(2);
@@ -133,6 +143,30 @@ test('Triggers observer', function (assert) {
 
   // This should not trigger the observer since it was disposed off.
   data(3);
+});
+
+test('Triggers observer on consecutive updates', function (assert) {
+  assert.plan(2);
+
+  var data = ward({foo: 'a'});
+  var count = 0;
+
+  var observer = ward.observe(data, function (newData) {
+    data = newData;
+
+    if (count == 0) {
+      assert.deepEqual(newData(), {foo: 'b'});
+    } else {
+      assert.deepEqual(newData(), {bar: 'c'});
+    }
+
+    count++;
+  });
+
+  data.foo('b');
+  data({bar: 'c'});
+
+  observer.dispose();
 });
 
 test('Triggers observer for nested change', function (assert) {
