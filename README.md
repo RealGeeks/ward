@@ -1,7 +1,7 @@
 Ward
 ====
 
-A library for effortlessly managing deeply-nested data structures in node and the browser.
+A library for effortlessly managing deeply-nested immutable data structures in node and the browser.
 
 Installation
 ------------
@@ -17,21 +17,22 @@ Usage
 var ward = require('ward');
 var data = ward({
   user: {
-    name: 'John',
+    firstName: 'John',
     friends: ['Mike', 'Alex']
   }
 });
 
-var observer = ward.observe(data, function (path, value) {
+var observer = ward.observe(data, function (newData) {
   // When something changes in the data structure,
-  // this gets called.
+  // this gets called with the new data structure.
+  data = newData;
 });
 
-data.user.name(); // -> 'John'
+data.user.firstName(); // -> 'John'
 data.user.friends(); // -> ['Mike', 'Alex']
 
-data.user.name('Jack');
-data.user.name(); // -> 'Jack'
+data.user.firstName('Jack');
+data.user.firstName(); // -> 'Jack'
 
 data.user.friends[0]('Josh');
 data.user.friends(); // -> ['Josh', 'Alex']
@@ -46,7 +47,7 @@ API
 
 ### `ward(value)`
 
-Create a ward wrapper object around any `value`. _Ward_ will recursively wrap plain objects and arrays.
+Create a ward wrapper object around any `value`. _Ward_ will recursively wrap plain objects and arrays. **All ward object are immutable.**
 
 ```js
 var data = ward({a: 1});
@@ -54,7 +55,7 @@ var data = ward({a: 1});
 
 ### `ward.observe(object, observer)`
 
-Observe ward `object` for changes, triggering `observer` function on any change to `object`’s value or nested values, passing in the path to the changed value as well as the new value.
+Observe ward `object` for changes, triggering `observer` function on any change to `object`’s value or nested values, passing in the new value wrapped in a ward object.
 
 ```js
 var students = ward({
@@ -62,18 +63,17 @@ var students = ward({
   groupB: ['Michael', 'Donna']
 });
 
-var observer1 = ward.observe(students, function (path, value) {
-  path === ['groupA', 0];
-  value === 'Rob';
+var observer1 = ward.observe(students, function (newStudents) {
+  newStudents.groupA[0]() == 'Rob';
+  students.groupA[0]() == 'Alex';
 });
 
-var observer2 = ward.observe(students.groupA, function (path, value) {
-  path === [0];
-  value === 'Rob';
+var observer2 = ward.observe(students.groupA, function (newGroupA) {
+  newGroupA[0]() == 'Rob';
 });
 
 // This will trigger the above observers.
-students.groupA[0] = 'Rob';
+students.groupA[0]('Rob');
 
 observer1.dispose();
 observer2.dispose();
@@ -88,7 +88,7 @@ var fruits = ward({red: 'apple', yellow: 'banana'});
 ward.keys(fruits); // -> 'red', 'yellow'
 
 var units = ward(['px', 'em', 'rem']);
-ward.keys(units); // -> 0, 1, 2
+ward.keys(units); // -> '0', '1', '2'
 ```
 
 ### `ward.count(object)`
@@ -103,36 +103,6 @@ var units = ward(['px', 'em', 'rem']);
 ward.count(units); // -> 3
 
 ward.count(units) === ward.keys(units).length // -> true
-```
-
-### `ward.assign(target, ...sources)`
-
-Extend ward `target` with the enumerable properties of one or more objects or ward objects.
-
-```js
-var data = {a: 1, b: 2};
-
-ward.assign(data, {c: 3}, ward({d: 4}));
-
-data(); // -> {a: 1, b: 2, c: 3, d: 4}
-```
-
-Array Methods
--------------
-
-When dealing with _ward_ objects that wrap around arrays, you can use array methods (like `forEach` and `push`) on them.
-
-```js
-var cars = ward(['Audi', 'BMW', 'Mercedes']);
-
-cars.forEach(function (car) {
-  // Do your thing!
-});
-
-cars.push('Ford');
-
-cars(); // -> ['Audi', 'BMW', 'Mercedes']
-
 ```
 
 IE8 Support
