@@ -8,15 +8,15 @@ var objectKeys = Object.keys;
 var namespace = '__ward__';
 
 var wrapperPrototype = {
-  create: function (value, extension) {
+  create: function (input, extension) {
     // this can be either a wrapper object or wrapperPrototype
     var model = this;
     var wrapper = objectCreate(wrapperPrototype);
-
     var shifter = wrapper.shifter = model.shifter;
-
-    wrapper.value = value;
-    wrapper.keys = (isArray(value) || isObject(value)) ? objectKeys(value) : [];
+    var isArr = isArray(input);
+    var isObj = isObject(input);
+    var value = wrapper.value = isArr && [] || isObj && {} || input;
+    var keys = wrapper.keys = (isArr || isObj) ? objectKeys(input) : [];
 
     model.shifter = {};
 
@@ -43,11 +43,13 @@ var wrapperPrototype = {
 
     accessor[namespace] = wrapper;
 
-    wrapper.keys.forEach(function (key) {
-      accessor[key] = extension && extension[key] || model.accessor[key] ||
-        wrapperPrototype.create(value[key]).accessor;
+    keys.forEach(function (key) {
+      var child = accessor[key] = extension && extension[key] ||
+        model.accessor[key] || wrapperPrototype.create(input[key]).accessor;
 
-      if (shifter.observers && !accessor[key][namespace].shifter.upstream) {
+      value[key] = child();
+
+      if (shifter.observers && !child[namespace].shifter.upstream) {
         wrapper.watchKey(key);
       }
     });

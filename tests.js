@@ -18,6 +18,24 @@ test('Read nested value', function (assert) {
   assert.equal(data.vector[1](), 2);
 });
 
+test('Does not mutate when value mutates', function (assert) {
+  assert.plan(2);
+
+  var value = [1, 2, 3];
+  var data = ward(value);
+
+  value.push(4);
+
+  assert.deepEqual(data(), [1, 2, 3], 'one level');
+
+  value = {a: {b: 1}};
+  data = ward(value);
+
+  value.a.b = 2;
+
+  assert.deepEqual(data(), {a: {b: 1}}, 'two levels');
+});
+
 test('Write undefined', function (assert) {
   assert.plan(1);
   assert.equal(ward(2)(undefined)(), undefined);
@@ -96,7 +114,7 @@ test('Does not update with equivalent value', function (assert) {
 
   var a = data.a({b: 0});
   assert.equal(a, data.a);
-  assert.equal(a(), object.a);
+  assert.deepEqual(a(), object.a);
 });
 
 test('Triggers observer', function (assert) {
@@ -161,7 +179,7 @@ test('Nested observers', function (assert) {
     assert.deepEqual(newData(), {b: 2}, 'new child Data');
   });
 
-  assert.equal(data(), object, 'same initial data');
+  assert.deepEqual(data(), {a: {b: 1}}, 'same initial data');
 
   data({a: {b: 2}});
 
