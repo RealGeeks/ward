@@ -12,20 +12,23 @@ var wrapperPrototype = {
     // this can be either a wrapper object or wrapperPrototype
     var model = this;
     var wrapper = objectCreate(wrapperPrototype);
-    var shifter = wrapper.shifter = model.shifter;
     var isArr = isArray(input);
     var isObj = isObject(input);
     var value = wrapper.value = isArr && [] || isObj && {} || input;
     var keys = wrapper.keys = (isArr || isObj) ? objectKeys(input) : [];
+    var shifter = wrapper.shifter = model.shifter || {};
 
-    model.shifter = {};
+    shifter.owner = wrapper;
+
+    if (model.shifter) {
+      model.shifter = {owner: model};
+    }
 
     var accessor = wrapper.accessor = function (newValue) {
       if (arguments.length) {
         var result = wrapper.set(newValue);
 
-        result[namespace].notifyUpstream();
-
+        result[namespace].triggerObservers('internal');
         return result;
       }
       return value;
@@ -44,12 +47,12 @@ var wrapperPrototype = {
     accessor[namespace] = wrapper;
 
     keys.forEach(function (key) {
-      var child = accessor[key] = extension && extension[key] ||
-        model.accessor[key] || wrapperPrototype.create(input[key]).accessor;
+      var existing = extension && extension[key] || model.accessor[key];
+      var child = accessor[key] = existing || wrapperPrototype.create(input[key]).accessor;
 
       value[key] = child();
 
-      if (shifter.observers && !child[namespace].shifter.upstream) {
+      if (!existing && (shifter.internal || shifter.external)) {
         wrapper.watchKey(key);
       }
     });
@@ -58,7 +61,6 @@ var wrapperPrototype = {
   },
 
   accessor: _.noop,
-  shifter: {},
 
   set: function (newValue) {
     var wrapper = this;
@@ -92,17 +94,17 @@ var wrapperPrototype = {
       objectKeys(newChildren).length
     ) {
       wrapper = wrapper.create(newValue, newChildren);
-      wrapper.triggerObservers();
+      wrapper.triggerObservers('external');
       accessor = wrapper.accessor;
     }
 
     return accessor;
   },
 
-  addObserver: function (observer) {
+  addObserver: function (observer, channel) {
     var wrapper = this;
     var shifter = wrapper.shifter;
-    var observers = shifter.observers || (shifter.observers = []);
+    var observers = shifter[channel] || (shifter[channel] = []);
 
     observers.push(observer);
 
@@ -116,33 +118,22 @@ var wrapperPrototype = {
         _.pull(observers, observer);
 
         if (!observers.length) {
-          _.invoke(shifter.subs, 'dispose');
-          shifter.subs = shifter.observers = undefined;
+          shifter[channel] = undefined;
         }
-      }
-    };
-  },
 
-  addUpstream: function (observer) {
-    var shifter = this.shifter;
-    var observers = shifter.upstream || (shifter.upstream = []);
-    observers.push(observer);
-
-    return {
-      dispose: function () {
-        _.pull(observers, observer);
-
-        if (!observers.length) {
-          shifter.upstream = undefined;
+        if (shifter.subs && !shifter.internal && !shifter.external) {
+          _.invoke(shifter.subs, 'dispose');
+          shifter.subs = undefined;
         }
       }
     };
   },
 
   watchKey: function (key) {
-    var wrapper = this;
-    wrapper.shifter.subs.push(
-      wrapper.accessor[key][namespace].addUpstream(function (newAccessor) {
+    var shifter = this.shifter;
+    shifter.subs.push(
+      this.accessor[key][namespace].addObserver(function (newAccessor) {
+        var wrapper = shifter.owner;
         var value = _.clone(wrapper.accessor());
         value[key] = newAccessor();
 
@@ -151,21 +142,14 @@ var wrapperPrototype = {
 
         var newWrapper = wrapper.create(value, extension);
 
-        newWrapper.triggerObservers();
-        newWrapper.notifyUpstream();
-      })
+        newWrapper.triggerObservers('external');
+        newWrapper.triggerObservers('internal');
+      }, 'internal')
     );
   },
 
-  triggerObservers: function () {
-    var observers = this.shifter.observers;
-    if (observers) {
-      _.invoke(observers, 'call', this, this.accessor);
-    }
-  },
-
-  notifyUpstream: function () {
-    var observers = this.shifter.upstream;
+  triggerObservers: function (channel) {
+    var observers = this.shifter[channel];
     if (observers) {
       _.invoke(observers, 'call', this, this.accessor);
     }
@@ -177,7 +161,7 @@ var ward = module.exports = function (value) {
 };
 
 ward.observe = function (object, observer) {
-  return object[namespace].addObserver(observer);
+  return object[namespace].addObserver(observer, 'external');
 };
 
 ward.keys = function (object) {

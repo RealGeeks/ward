@@ -187,6 +187,33 @@ test('Nested observers', function (assert) {
   observer2.dispose();
 });
 
+test('README example', function (assert) {
+  assert.plan(4);
+
+  var data = ward({
+    user: {
+      firstName: 'John',
+      friends: ['Mike', 'Alex']
+    }
+  });
+
+  var observer = ward.observe(data, function (newData) {
+    data = newData;
+  });
+
+  assert.equal(data.user.firstName(), 'John');
+  assert.deepEqual(data.user.friends(), ['Mike', 'Alex']);
+
+  data.user.firstName('Jack');
+  assert.equal(data.user.firstName(), 'Jack');
+
+  data.user.friends[0]('Josh');
+  assert.deepEqual(data.user.friends(), ['Josh', 'Alex']);
+
+  // Stop observing changes to data.
+  observer.dispose();
+});
+
 test('Ward.keys returns an object’s own enumerable properties',
   function (assert) {
     assert.plan(3);
