@@ -26,10 +26,7 @@ var wrapperPrototype = {
 
     var accessor = wrapper.accessor = function (newValue) {
       if (arguments.length) {
-        var result = wrapper.set(newValue);
-
-        result[namespace].triggerObservers('internal');
-        return result;
+        return wrapper.set(newValue);
       }
       return value;
     };
@@ -63,23 +60,32 @@ var wrapperPrototype = {
   accessor: _.noop,
 
   set: function (newValue) {
+    var result = this.walk(newValue);
+
+    if (result != this) {
+      result.triggerObservers('internal');
+    }
+
+    return result.accessor;
+  },
+
+  walk: function (newValue) {
     var wrapper = this;
-    var accessor = wrapper.accessor;
     var oldValue = wrapper.value;
     if (
       oldValue === newValue ||
       // Test for NaN value
       oldValue != oldValue && newValue != newValue
     ) {
-      return accessor;
+      return wrapper;
     }
 
     var newChildren = wrapper.keys.reduce(function (accumulator, key) {
-      var oldChild = accessor[key];
+      var oldChild = wrapper.accessor[key][namespace];
       if (_.has(newValue, key)) {
-        var newChild = oldChild(newValue[key]);
+        var newChild = oldChild.walk(newValue[key]);
         if (oldChild != newChild) {
-          accumulator[key] = newChild;
+          accumulator[key] = newChild.accessor;
         }
       }
       return accumulator;
@@ -95,10 +101,9 @@ var wrapperPrototype = {
     ) {
       wrapper = wrapper.create(newValue, newChildren);
       wrapper.triggerObservers('external');
-      accessor = wrapper.accessor;
     }
 
-    return accessor;
+    return wrapper;
   },
 
   addObserver: function (observer, channel) {

@@ -169,6 +169,34 @@ test('Triggers observer on consecutive updates', function (assert) {
   observer.dispose();
 });
 
+test('Triggers observer only once', function (assert) {
+  assert.plan(1);
+
+  var data = ward({foo: {bar: {baz: 1, qux: 2}}});
+  var observer = ward.observe(data, function (newData) {
+    assert.deepEqual(newData(), {foo: {bar: {baz: 3, qux: 4}}});
+  });
+
+  data.foo.bar({baz: 3, qux: 4});
+
+  observer.dispose();
+});
+
+test('Does not trigger observer for same child value', function (assert) {
+  assert.plan(1);
+
+  var data = ward({foo: 'bar'});
+  var observer = ward.observe(data, function () {
+    assert.fail('Should not have been called!');
+  });
+
+  data.foo('bar');
+
+  observer.dispose();
+
+  assert.ok('Done');
+});
+
 test('Triggers observer for nested change', function (assert) {
   var data = ward({a: 1});
 
