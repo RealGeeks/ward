@@ -176,3 +176,41 @@ ward.keys = function (object) {
 ward.count = function (object) {
   return object[namespace].keys.length;
 };
+
+ward.assign = function (target, source) {
+  if (!target[namespace]) {
+    throw new TypeError('First argument needs to be a ward object.');
+  }
+
+  var targetValue = target();
+  var i;
+  var keys;
+  var j;
+  var key;
+
+  if (!isObject(targetValue) && !isArray(targetValue)) {
+    throw new TypeError('Can only assign to plain objects and arrays.');
+  }
+
+  targetValue = _.clone(targetValue);
+
+  for (i = 1; i < arguments.length; i++) {
+    source = arguments[i];
+
+    if (source[namespace]) {
+      source = source();
+    }
+
+    if (!isObject(source) && !isArray(source)) {
+      continue;
+    }
+
+    keys = Object.keys(source);
+    for (j = 0; j < keys.length; j++) {
+      key = keys[j];
+      targetValue[key] = source[key];
+    }
+  }
+
+  return target(targetValue);
+};

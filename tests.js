@@ -322,3 +322,36 @@ test('Ward objects used in JSON.stringify()', function (assert) {
 
   assert.deepEqual(JSON.stringify(ward(9)), '9');
 });
+
+test('Ward.assign', function (assert) {
+  assert.plan(7);
+
+  var data = ward({a: 1});
+
+  assert.throws(ward.assign.bind(undefined, 3, {a: 2}), 'throws for number');
+  assert.throws(
+    ward.assign.bind(undefined, function () {}),
+    'throws for function'
+  );
+
+  assert.equal(ward.assign(data), data, 'no source');
+  assert.equal(ward.assign(data, 5), data, 'ignore non objects or arrays');
+
+  assert.deepEqual(
+    ward.assign(data, {a: 2, b: 3}, {b: 4})(),
+    {a: 2, b: 4},
+    'extend object'
+  );
+
+  assert.deepEqual(
+    ward.assign(ward([1, 2, 3]), [5])(),
+    [5, 2, 3],
+    'extend array'
+  );
+
+  assert.deepEqual(
+    ward.assign(data, ward({foo: 'bar'}))(),
+    {a: 1, foo: 'bar'},
+    'extend with ward object'
+  );
+});
