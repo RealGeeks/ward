@@ -249,6 +249,34 @@ test('Nested observers', function (assert) {
   observer2.dispose();
 });
 
+test('Change ward object from observer', function (assert) {
+  assert.plan(4);
+
+  var data = ward({a: {b: 1}});
+  var count = 0;
+
+  var o1 = ward.observe(data, function (newData) {
+    assert.equal(newData.a.b(), 3, 'Third call');
+    assert.equal(count, 2, 'Call count');
+  });
+
+  var o2 = ward.observe(data.a, function (newA) {
+    if (!count) {
+      assert.equal(newA.b(), 2, 'First call');
+    } else {
+      assert.equal(newA.b(), 3, 'Second call');
+    }
+
+    count++;
+    newA.b(3);
+  });
+
+  data.a.b(2);
+
+  o1.dispose();
+  o2.dispose();
+});
+
 test('README example', function (assert) {
   assert.plan(4);
 
