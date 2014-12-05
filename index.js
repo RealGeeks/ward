@@ -54,6 +54,11 @@ var wrapperPrototype = {
       }
     });
 
+    // Ensure correct array length property.
+    if (isArr) {
+      value.length = input.length;
+    }
+
     return wrapper;
   },
 

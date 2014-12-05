@@ -36,6 +36,20 @@ test('Does not mutate when value mutates', function (assert) {
   assert.deepEqual(data(), {a: {b: 1}}, 'two levels');
 });
 
+test('Correctly stores arrays with holes', function (assert) {
+  var array = [];
+  array.length = 9;
+  array[2] = 1;
+  array[7] = 2;
+
+  var data = ward(array);
+  assert.plan(3);
+
+  assert.equal(data().length, 9);
+  assert.equal(data()[2], 1);
+  assert.equal(data()[7], 2);
+});
+
 test('Write undefined', function (assert) {
   assert.plan(1);
   assert.equal(ward(2)(undefined)(), undefined);
