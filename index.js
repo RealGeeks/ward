@@ -1,8 +1,12 @@
 'use strict';
 
-var _ = require('lodash');
-var isArray = _.isArray;
-var isObject = _.isPlainObject;
+var constant = require('lodash/utility/constant');
+var pull = require('lodash/array/pull');
+var invoke = require('lodash/collection/invoke');
+var has = require('lodash/object/has');
+var clone = require('lodash/lang/clone');
+var isObject = require('lodash/lang/isPlainObject');
+var isArray = Array.isArray;
 var objectCreate = Object.create;
 var objectKeys = Object.keys;
 var namespace = '__ward__';
@@ -33,7 +37,7 @@ var wrapperPrototype = {
 
     // valueOf enables comparisons such as accessor == 2.
     // toJSON enables passing of accessor object inside JSON.stringify().
-    accessor.valueOf = accessor.toJSON = _.constant(value);
+    accessor.valueOf = accessor.toJSON = constant(value);
 
     // Enables use in string contexts, such as 'a' + accessor would be 'ab'
     // when wrapper.value is ['b'].
@@ -62,7 +66,7 @@ var wrapperPrototype = {
     return wrapper;
   },
 
-  accessor: _.noop,
+  accessor: require('lodash/utility/noop'),
 
   set: function (newValue) {
     var result = this.walk(newValue);
@@ -87,7 +91,7 @@ var wrapperPrototype = {
 
     var newChildren = wrapper.keys.reduce(function (accumulator, key) {
       var oldChild = wrapper.accessor[key][namespace];
-      if (_.has(newValue, key)) {
+      if (has(newValue, key)) {
         var newChild = oldChild.walk(newValue[key]);
         if (oldChild != newChild) {
           accumulator[key] = newChild.accessor;
@@ -125,14 +129,14 @@ var wrapperPrototype = {
 
     return {
       dispose: function () {
-        _.pull(observers, observer);
+        pull(observers, observer);
 
         if (!observers.length) {
           shifter[channel] = undefined;
         }
 
         if (shifter.subs && !shifter.internal && !shifter.external) {
-          _.invoke(shifter.subs, 'dispose');
+          invoke(shifter.subs, 'dispose');
           shifter.subs = undefined;
         }
       }
@@ -144,7 +148,7 @@ var wrapperPrototype = {
     shifter.subs.push(
       this.accessor[key][namespace].addObserver(function (newAccessor) {
         var wrapper = shifter.owner;
-        var value = _.clone(wrapper.accessor());
+        var value = clone(wrapper.accessor());
         value[key] = newAccessor();
 
         var extension = {};
@@ -161,7 +165,7 @@ var wrapperPrototype = {
   triggerObservers: function (channel) {
     var observers = this.shifter[channel];
     if (observers) {
-      _.invoke(observers, 'call', this, this.accessor);
+      invoke(observers, 'call', this, this.accessor);
     }
   }
 };
@@ -197,7 +201,7 @@ ward.assign = function (target, source) {
     throw new TypeError('Can only assign to plain objects and arrays.');
   }
 
-  targetValue = _.clone(targetValue);
+  targetValue = clone(targetValue);
 
   for (i = 1; i < arguments.length; i++) {
     source = arguments[i];
