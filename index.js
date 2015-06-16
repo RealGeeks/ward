@@ -65,7 +65,7 @@ var wrapperPrototype = {
     return wrapper;
   },
 
-  accessor: require('lodash/utility/noop'),
+  accessor: {},
 
   set: function (newValue) {
     var result = this.walk(newValue);
