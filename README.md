@@ -28,14 +28,14 @@ var observer = ward.observe(data, function (newData) {
   data = newData;
 });
 
-data.user.firstName(); // -> 'John'
-data.user.friends(); // -> ['Mike', 'Alex']
+data.user.firstName.get(); // -> 'John'
+data.user.friends.get(); // -> ['Mike', 'Alex']
 
-data.user.firstName('Jack');
-data.user.firstName(); // -> 'Jack'
+data.user.firstName.set('Jack');
+data.user.firstName.get(); // -> 'Jack'
 
-data.user.friends[0]('Josh');
-data.user.friends(); // -> ['Josh', 'Alex']
+data.user.friends[0].set('Josh');
+data.user.friends.get(); // -> ['Josh', 'Alex']
 
 // Stop observing changes to data.
 observer.dispose();
@@ -64,16 +64,16 @@ var students = ward({
 });
 
 var observer1 = ward.observe(students, function (newStudents) {
-  newStudents.groupA[0]() == 'Rob';
-  students.groupA[0]() == 'Alex';
+  newStudents.groupA[0].get() == 'Rob';
+  students.groupA[0].get() == 'Alex';
 });
 
 var observer2 = ward.observe(students.groupA, function (newGroupA) {
-  newGroupA[0]() == 'Rob';
+  newGroupA[0].get() == 'Rob';
 });
 
 // This will trigger the above observers.
-students.groupA[0]('Rob');
+students.groupA[0].get('Rob');
 
 observer1.dispose();
 observer2.dispose();

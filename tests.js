@@ -6,16 +6,16 @@ var ward = require('./');
 test('Read primitive value', function (assert) {
   var data = ward(2);
   assert.plan(1);
-  assert.equal(data(), 2);
+  assert.equal(data.get(), 2);
 });
 
 test('Read nested value', function (assert) {
   var data = ward({prop: 2, vector: [1, 2, 3]});
   assert.plan(4);
-  assert.deepEqual(data(), {prop: 2, vector: [1, 2, 3]});
-  assert.equal(data.prop(), 2);
-  assert.deepEqual(data.vector(), [1, 2, 3]);
-  assert.equal(data.vector[1](), 2);
+  assert.deepEqual(data.get(), {prop: 2, vector: [1, 2, 3]});
+  assert.equal(data.prop.get(), 2);
+  assert.deepEqual(data.vector.get(), [1, 2, 3]);
+  assert.equal(data.vector[1].get(), 2);
 });
 
 test('Does not mutate when value mutates', function (assert) {
@@ -26,14 +26,14 @@ test('Does not mutate when value mutates', function (assert) {
 
   value.push(4);
 
-  assert.deepEqual(data(), [1, 2, 3], 'one level');
+  assert.deepEqual(data.get(), [1, 2, 3], 'one level');
 
   value = {a: {b: 1}};
   data = ward(value);
 
   value.a.b = 2;
 
-  assert.deepEqual(data(), {a: {b: 1}}, 'two levels');
+  assert.deepEqual(data.get(), {a: {b: 1}}, 'two levels');
 });
 
 test('Correctly stores arrays with holes', function (assert) {
@@ -45,33 +45,33 @@ test('Correctly stores arrays with holes', function (assert) {
   var data = ward(array);
   assert.plan(3);
 
-  assert.equal(data().length, 9);
-  assert.equal(data()[2], 1);
-  assert.equal(data()[7], 2);
+  assert.equal(data.get().length, 9);
+  assert.equal(data.get()[2], 1);
+  assert.equal(data.get()[7], 2);
 });
 
 test('Write undefined', function (assert) {
   assert.plan(1);
-  assert.equal(ward(2)(undefined)(), undefined);
+  assert.equal(ward(2).set(undefined).get(), undefined);
 });
 
 test('Writing equivalent value returns same object', function (assert) {
   assert.plan(2);
 
   var data = ward('foo');
-  assert.equal(data('foo'), data);
+  assert.equal(data.set('foo'), data);
 
   data = ward({a: 'foo'});
-  assert.equal(data({a: 'foo'}), data);
+  assert.equal(data.set({a: 'foo'}), data);
 });
 
 test('Write primitive value', function (assert) {
   var data = ward('ant');
   assert.plan(2);
 
-  assert.equal(data(), 'ant');
-  data = data('bee');
-  assert.equal(data(), 'bee');
+  assert.equal(data.get(), 'ant');
+  data = data.set('bee');
+  assert.equal(data.get(), 'bee');
 
 });
 
@@ -80,12 +80,12 @@ test('Write nested primitive', function (assert) {
   var nested = data.nested;
   assert.plan(3);
 
-  assert.equal(nested(), 'a');
+  assert.equal(nested.get(), 'a');
 
-  nested = nested('b');
+  nested = nested.set('b');
 
-  assert.equal(nested(), 'b');
-  assert.deepEqual(data(), {nested: 'a'});
+  assert.equal(nested.get(), 'b');
+  assert.deepEqual(data.get(), {nested: 'a'});
 });
 
 test('Write nested object', function (assert) {
@@ -93,41 +93,41 @@ test('Write nested object', function (assert) {
   var nested = data.nested;
   assert.plan(3);
 
-  assert.deepEqual(nested(), {a: 1});
+  assert.deepEqual(nested.get(), {a: 1});
 
-  nested = nested({b: 2});
+  nested = nested.set({b: 2});
 
-  assert.deepEqual(nested(), {b: 2});
-  assert.deepEqual(data(), {nested: {a: 1}});
+  assert.deepEqual(nested.get(), {b: 2});
+  assert.deepEqual(data.get(), {nested: {a: 1}});
 });
 
 test('Write nested array', function (assert) {
   var data = ward({nested: {a: [1, 2, 3]}});
   assert.plan(2);
 
-  var nested = data.nested.a[1]({b: 2});
-  assert.equal(nested.b(), 2);
-  assert.deepEqual(data(), {nested: {a: [1, 2, 3]}});
+  var nested = data.nested.a[1].set({b: 2});
+  assert.equal(nested.b.get(), 2);
+  assert.deepEqual(data.get(), {nested: {a: [1, 2, 3]}});
 });
 
 test('Write deeply nested object', function (assert) {
   var data = ward({deeply: {nested: {a: 1}}});
   assert.plan(4);
 
-  var nested = data.deeply.nested.a(2);
+  var nested = data.deeply.nested.a.set(2);
 
-  assert.deepEqual(nested(), 2);
-  assert.deepEqual(data.deeply.nested(), {a: 1});
-  assert.deepEqual(data.deeply(), {nested: {a: 1}});
-  assert.deepEqual(data(), {deeply: {nested: {a: 1}}});
+  assert.deepEqual(nested.get(), 2);
+  assert.deepEqual(data.deeply.nested.get(), {a: 1});
+  assert.deepEqual(data.deeply.get(), {nested: {a: 1}});
+  assert.deepEqual(data.get(), {deeply: {nested: {a: 1}}});
 });
 
 test('Removes old wrappers', function (assert) {
   var data = ward({nested: {a: 1, b: 2}});
   assert.plan(2);
 
-  var nested = data.nested({b: 3});
-  assert.equal(nested.b(), 3);
+  var nested = data.nested.set({b: 3});
+  assert.equal(nested.b.get(), 3);
   assert.equal(nested.a, undefined, 'Removes old wrapper');
 });
 
@@ -136,9 +136,9 @@ test('Does not update with equivalent value', function (assert) {
   var data = ward(object);
   assert.plan(2);
 
-  var a = data.a({b: 0});
+  var a = data.a.set({b: 0});
   assert.equal(a, data.a);
-  assert.deepEqual(a(), object.a);
+  assert.deepEqual(a.get(), object.a);
 });
 
 test('Triggers observer', function (assert) {
@@ -147,16 +147,16 @@ test('Triggers observer', function (assert) {
   assert.plan(2);
 
   var observer = ward.observe(data, function (newData) {
-    assert.equal(data(), 1);
-    assert.equal(newData(), 2);
+    assert.equal(data.get(), 1);
+    assert.equal(newData.get(), 2);
   });
 
-  data(2);
+  data.set(2);
 
   observer.dispose();
 
   // This should not trigger the observer since it was disposed off.
-  data(3);
+  data.set(3);
 });
 
 test('Triggers observer on consecutive updates', function (assert) {
@@ -169,16 +169,16 @@ test('Triggers observer on consecutive updates', function (assert) {
     data = newData;
 
     if (count == 0) {
-      assert.deepEqual(newData(), {foo: 'b'});
+      assert.deepEqual(newData.get(), {foo: 'b'});
     } else {
-      assert.deepEqual(newData(), {bar: 'c'});
+      assert.deepEqual(newData.get(), {bar: 'c'});
     }
 
     count++;
   });
 
-  data.foo('b');
-  data({bar: 'c'});
+  data.foo.set('b');
+  data.set({bar: 'c'});
 
   observer.dispose();
 });
@@ -188,10 +188,10 @@ test('Triggers observer only once', function (assert) {
 
   var data = ward({foo: {bar: {baz: 1, qux: 2}}});
   var observer = ward.observe(data, function (newData) {
-    assert.deepEqual(newData(), {foo: {bar: {baz: 3, qux: 4}}});
+    assert.deepEqual(newData.get(), {foo: {bar: {baz: 3, qux: 4}}});
   });
 
-  data.foo.bar({baz: 3, qux: 4});
+  data.foo.bar.set({baz: 3, qux: 4});
 
   observer.dispose();
 });
@@ -204,7 +204,7 @@ test('Does not trigger observer for same child value', function (assert) {
     assert.fail('Should not have been called!');
   });
 
-  data.foo('bar');
+  data.foo.set('bar');
 
   observer.dispose();
 
@@ -217,11 +217,11 @@ test('Triggers observer for nested change', function (assert) {
   assert.plan(2);
 
   var observer = ward.observe(data, function (newData) {
-    assert.equal(data.a(), 1, 'old data');
-    assert.equal(newData.a(), 2, 'new data');
+    assert.equal(data.a.get(), 1, 'old data');
+    assert.equal(newData.a.get(), 2, 'new data');
   });
 
-  data.a(2);
+  data.a.set(2);
 
   observer.dispose();
 });
@@ -232,11 +232,11 @@ test('Can observe nested data', function (assert) {
   assert.plan(2);
 
   var observer = ward.observe(data.a, function (newA) {
-    assert.deepEqual(data.a(), {b: 1}, 'old a');
-    assert.deepEqual(newA(), {b: 2}, 'new a');
+    assert.deepEqual(data.a.get(), {b: 1}, 'old a');
+    assert.deepEqual(newA.get(), {b: 2}, 'new a');
   });
 
-  data.a.b(2);
+  data.a.b.set(2);
 
   observer.dispose();
 });
@@ -248,16 +248,16 @@ test('Nested observers', function (assert) {
   var data = ward(object);
 
   var observer1 = ward.observe(data, function (newData) {
-    assert.deepEqual(newData(), {a: {b: 2}}, 'new Data');
+    assert.deepEqual(newData.get(), {a: {b: 2}}, 'new Data');
   });
 
   var observer2 = ward.observe(data.a, function (newData) {
-    assert.deepEqual(newData(), {b: 2}, 'new child Data');
+    assert.deepEqual(newData.get(), {b: 2}, 'new child Data');
   });
 
-  assert.deepEqual(data(), {a: {b: 1}}, 'same initial data');
+  assert.deepEqual(data.get(), {a: {b: 1}}, 'same initial data');
 
-  data({a: {b: 2}});
+  data.set({a: {b: 2}});
 
   observer1.dispose();
   observer2.dispose();
@@ -270,22 +270,22 @@ test('Change ward object from observer', function (assert) {
   var count = 0;
 
   var o1 = ward.observe(data, function (newData) {
-    assert.equal(newData.a.b(), 3, 'Third call');
+    assert.equal(newData.a.b.get(), 3, 'Third call');
     assert.equal(count, 2, 'Call count');
   });
 
   var o2 = ward.observe(data.a, function (newA) {
     if (!count) {
-      assert.equal(newA.b(), 2, 'First call');
+      assert.equal(newA.b.get(), 2, 'First call');
     } else {
-      assert.equal(newA.b(), 3, 'Second call');
+      assert.equal(newA.b.get(), 3, 'Second call');
     }
 
     count++;
-    newA.b(3);
+    newA.b.set(3);
   });
 
-  data.a.b(2);
+  data.a.b.set(2);
 
   o1.dispose();
   o2.dispose();
@@ -305,14 +305,14 @@ test('README example', function (assert) {
     data = newData;
   });
 
-  assert.equal(data.user.firstName(), 'John');
-  assert.deepEqual(data.user.friends(), ['Mike', 'Alex']);
+  assert.equal(data.user.firstName.get(), 'John');
+  assert.deepEqual(data.user.friends.get(), ['Mike', 'Alex']);
 
-  data.user.firstName('Jack');
-  assert.equal(data.user.firstName(), 'Jack');
+  data.user.firstName.set('Jack');
+  assert.equal(data.user.firstName.get(), 'Jack');
 
-  data.user.friends[0]('Josh');
-  assert.deepEqual(data.user.friends(), ['Josh', 'Alex']);
+  data.user.friends[0].set('Josh');
+  assert.deepEqual(data.user.friends.get(), ['Josh', 'Alex']);
 
   // Stop observing changes to data.
   observer.dispose();
@@ -366,7 +366,7 @@ test('Ward objects used in JSON.stringify()', function (assert) {
 });
 
 test('Ward.assign', function (assert) {
-  assert.plan(7);
+  assert.plan(9);
 
   var data = ward({a: 1});
 
@@ -378,21 +378,23 @@ test('Ward.assign', function (assert) {
 
   assert.equal(ward.assign(data), data, 'no source');
   assert.equal(ward.assign(data, 5), data, 'ignore non objects or arrays');
+  assert.equal(ward.assign(data, undefined), data, 'ignore undefined');
+  assert.equal(ward.assign(data, null), data, 'ignore null');
 
   assert.deepEqual(
-    ward.assign(data, {a: 2, b: 3}, {b: 4})(),
+    ward.assign(data, {a: 2, b: 3}, {b: 4}).get(),
     {a: 2, b: 4},
     'extend object'
   );
 
   assert.deepEqual(
-    ward.assign(ward([1, 2, 3]), [5])(),
+    ward.assign(ward([1, 2, 3]), [5]).get(),
     [5, 2, 3],
     'extend array'
   );
 
   assert.deepEqual(
-    ward.assign(data, ward({foo: 'bar'}))(),
+    ward.assign(data, ward({foo: 'bar'})).get(),
     {a: 1, foo: 'bar'},
     'extend with ward object'
   );

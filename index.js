@@ -28,16 +28,15 @@ var wrapperPrototype = {
       model.shifter = {owner: model};
     }
 
-    var accessor = wrapper.accessor = function (newValue) {
-      if (arguments.length) {
+    var accessor = wrapper.accessor = {
+      set: function (newValue) {
         return wrapper.set(newValue);
       }
-      return value;
     };
 
     // valueOf enables comparisons such as accessor == 2.
     // toJSON enables passing of accessor object inside JSON.stringify().
-    accessor.valueOf = accessor.toJSON = constant(value);
+    accessor.get = accessor.valueOf = accessor.toJSON = constant(value);
 
     // Enables use in string contexts, such as 'a' + accessor would be 'ab'
     // when wrapper.value is ['b'].
@@ -51,7 +50,7 @@ var wrapperPrototype = {
       var existing = extension && extension[key] || model.accessor[key];
       var child = accessor[key] = existing || wrapperPrototype.create(input[key]).accessor;
 
-      value[key] = child();
+      value[key] = child.get();
 
       if (!existing && (shifter.internal || shifter.external)) {
         wrapper.watchKey(key);
@@ -66,7 +65,7 @@ var wrapperPrototype = {
     return wrapper;
   },
 
-  accessor: require('lodash/utility/noop'),
+  accessor: {},
 
   set: function (newValue) {
     var result = this.walk(newValue);
@@ -148,8 +147,8 @@ var wrapperPrototype = {
     shifter.subs.push(
       this.accessor[key][namespace].addObserver(function (newAccessor) {
         var wrapper = shifter.owner;
-        var value = clone(wrapper.accessor());
-        value[key] = newAccessor();
+        var value = clone(wrapper.accessor.get());
+        value[key] = newAccessor.get();
 
         var extension = {};
         extension[key] = newAccessor;
@@ -191,7 +190,7 @@ ward.assign = function (target, source) {
     throw new TypeError('First argument needs to be a ward object.');
   }
 
-  var targetValue = target();
+  var targetValue = target.get();
   var i;
   var keys;
   var j;
@@ -206,8 +205,8 @@ ward.assign = function (target, source) {
   for (i = 1; i < arguments.length; i++) {
     source = arguments[i];
 
-    if (source[namespace]) {
-      source = source();
+    if (source && source[namespace]) {
+      source = source.get();
     }
 
     if (!isObject(source) && !isArray(source)) {
@@ -221,5 +220,5 @@ ward.assign = function (target, source) {
     }
   }
 
-  return target(targetValue);
+  return target.set(targetValue);
 };
