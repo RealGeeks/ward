@@ -366,7 +366,7 @@ test('Ward objects used in JSON.stringify()', function (assert) {
 });
 
 test('Ward.assign', function (assert) {
-  assert.plan(7);
+  assert.plan(9);
 
   var data = ward({a: 1});
 
@@ -378,6 +378,8 @@ test('Ward.assign', function (assert) {
 
   assert.equal(ward.assign(data), data, 'no source');
   assert.equal(ward.assign(data, 5), data, 'ignore non objects or arrays');
+  assert.equal(ward.assign(data, undefined), data, 'ignore undefined');
+  assert.equal(ward.assign(data, null), data, 'ignore null');
 
   assert.deepEqual(
     ward.assign(data, {a: 2, b: 3}, {b: 4}).get(),

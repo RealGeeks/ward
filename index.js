@@ -205,7 +205,7 @@ ward.assign = function (target, source) {
   for (i = 1; i < arguments.length; i++) {
     source = arguments[i];
 
-    if (source[namespace]) {
+    if (source && source[namespace]) {
       source = source.get();
     }
 
