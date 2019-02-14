@@ -24,7 +24,7 @@
     "jscs": "^1.6.1",
     "jshint": "^2.5.5",
     "tape": "^2.14.0",
-    "testem": "^0.6.18"
+    "testem": "^2.4.10"
   },
   "dependencies": {
     "lodash": "^4.17.11"
