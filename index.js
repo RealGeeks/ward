@@ -1,11 +1,12 @@
 'use strict';
 
-var constant = require('lodash/utility/constant');
-var pull = require('lodash/array/pull');
-var invoke = require('lodash/collection/invoke');
-var has = require('lodash/object/has');
-var clone = require('lodash/lang/clone');
-var isObject = require('lodash/lang/isPlainObject');
+var lodash = require('lodash');
+var constant = lodash.constant;
+var pull = lodash.pull;
+var invoke = lodash.invoke;
+var has = lodash.has;
+var clone = lodash.clone;
+var isObject = lodash.isObject;
 var isArray = Array.isArray;
 var objectCreate = Object.create;
 var objectKeys = Object.keys;
