@@ -132,7 +132,7 @@ var wrapperPrototype = {
         }
 
         if (shifter.subs && !shifter.internal && !shifter.external) {
-          _.invoke(shifter.subs, 'dispose');
+          _.invokeMap(shifter.subs, 'dispose');
           shifter.subs = undefined;
         }
       }
@@ -161,7 +161,7 @@ var wrapperPrototype = {
   triggerObservers: function (channel) {
     var observers = this.shifter[channel];
     if (observers) {
-      _.invoke(observers, 'call', this, this.accessor);
+      _.invokeMap(observers, 'call', this, this.accessor);
     }
   }
 };
