@@ -10,6 +10,14 @@ Installation
 npm install ward
 ```
 
+Versions
+--------
+
+Master is still on the 0.4.x releases since the only internal project we have that uses this library still uses 0.4.x.
+Also, we are publishing to @realgeeks/ward now since we don't have access to `ward` on npm.
+New version is on the `new-version` branch.
+
+
 Usage
 -----
 
